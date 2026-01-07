@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
-	_ "modernc.org/sqlite"
+	_ "github.com/go-sql-driver/mysql"
 	"time"
 )
 
@@ -74,7 +74,7 @@ var db *sql.DB
 
 func InitDB(cfg config.Config) error {
 	var err error
-	db, err = sql.Open("sqlite", cfg.DatabaseURL)
+	db, err = sql.Open("mysql", cfg.DatabaseDSN)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -92,25 +92,25 @@ func InitDB(cfg config.Config) error {
 func createTables() error {
 	customerTable := `
 	CREATE TABLE IF NOT EXISTS customers (
-		handle TEXT PRIMARY KEY,
+		handle VARCHAR(255) PRIMARY KEY,
 		active_subscriptions INTEGER,
 		address TEXT,
 		address2 TEXT,
 		cancelled_amount INTEGER,
 		cancelled_invoices INTEGER,
 		cancelled_subscriptions INTEGER,
-		city TEXT,
-		company TEXT,
-		country TEXT,
+		city VARCHAR(255),
+		company VARCHAR(255),
+		country VARCHAR(255),
 		created DATETIME,
 		dunning_amount INTEGER,
 		dunning_invoices INTEGER,
-		email TEXT,
+		email VARCHAR(255),
 		expired_subscriptions INTEGER,
 		failed_amount INTEGER,
 		failed_invoices INTEGER,
-		first_name TEXT,
-		last_name TEXT,
+		first_name VARCHAR(255),
+		last_name VARCHAR(255),
 		non_renewing_subscriptions INTEGER,
 		on_hold_subscriptions INTEGER,
 		pending_additional_cost_amount INTEGER,
@@ -119,8 +119,8 @@ func createTables() error {
 		pending_credit_amount INTEGER,
 		pending_credits INTEGER,
 		pending_invoices INTEGER,
-		phone TEXT,
-		postal_code TEXT,
+		phone VARCHAR(255),
+		postal_code VARCHAR(255),
 		refunded_amount INTEGER,
 		settled_amount INTEGER,
 		settled_invoices INTEGER,
@@ -136,10 +136,10 @@ func createTables() error {
 
 	invoiceTable := `
 	CREATE TABLE IF NOT EXISTS invoices (
-		id TEXT PRIMARY KEY,
-		handle TEXT,
-		customer TEXT,
-		currency TEXT,
+		id VARCHAR(255) PRIMARY KEY,
+		handle VARCHAR(255),
+		customer VARCHAR(255),
+		currency VARCHAR(255),
 		created DATETIME,
 		discount_amount INTEGER,
 		org_amount INTEGER,
@@ -147,8 +147,8 @@ func createTables() error {
 		amount_ex_vat INTEGER,
 		refunded_amount INTEGER,
 		authorized_amount INTEGER,
-		country TEXT,
-		states TEXT
+		country VARCHAR(255),
+		states JSON
 	);`
 
 	if _, err := db.Exec(customerTable); err != nil {
@@ -175,46 +175,46 @@ func CreateOrUpdateCustomer(customer *Customer) error {
 		transferred_credit_amount, transferred_credits, trial_active_subscriptions,
 		trial_cancelled_subscriptions
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	ON CONFLICT(handle) DO UPDATE SET
-		active_subscriptions = excluded.active_subscriptions,
-		address = excluded.address,
-		address2 = excluded.address2,
-		cancelled_amount = excluded.cancelled_amount,
-		cancelled_invoices = excluded.cancelled_invoices,
-		cancelled_subscriptions = excluded.cancelled_subscriptions,
-		city = excluded.city,
-		company = excluded.company,
-		country = excluded.country,
-		created = excluded.created,
-		dunning_amount = excluded.dunning_amount,
-		dunning_invoices = excluded.dunning_invoices,
-		email = excluded.email,
-		expired_subscriptions = excluded.expired_subscriptions,
-		failed_amount = excluded.failed_amount,
-		failed_invoices = excluded.failed_invoices,
-		first_name = excluded.first_name,
-		last_name = excluded.last_name,
-		non_renewing_subscriptions = excluded.non_renewing_subscriptions,
-		on_hold_subscriptions = excluded.on_hold_subscriptions,
-		pending_additional_cost_amount = excluded.pending_additional_cost_amount,
-		pending_additional_costs = excluded.pending_additional_costs,
-		pending_amount = excluded.pending_amount,
-		pending_credit_amount = excluded.pending_credit_amount,
-		pending_credits = excluded.pending_credits,
-		pending_invoices = excluded.pending_invoices,
-		phone = excluded.phone,
-		postal_code = excluded.postal_code,
-		refunded_amount = excluded.refunded_amount,
-		settled_amount = excluded.settled_amount,
-		settled_invoices = excluded.settled_invoices,
-		subscriptions = excluded.subscriptions,
-		test = excluded.test,
-		transferred_additional_cost_amount = excluded.transferred_additional_cost_amount,
-		transferred_additional_costs = excluded.transferred_additional_costs,
-		transferred_credit_amount = excluded.transferred_credit_amount,
-		transferred_credits = excluded.transferred_credits,
-		trial_active_subscriptions = excluded.trial_active_subscriptions,
-		trial_cancelled_subscriptions = excluded.trial_cancelled_subscriptions;
+	ON DUPLICATE KEY UPDATE
+		active_subscriptions = VALUES(active_subscriptions),
+		address = VALUES(address),
+		address2 = VALUES(address2),
+		cancelled_amount = VALUES(cancelled_amount),
+		cancelled_invoices = VALUES(cancelled_invoices),
+		cancelled_subscriptions = VALUES(cancelled_subscriptions),
+		city = VALUES(city),
+		company = VALUES(company),
+		country = VALUES(country),
+		created = VALUES(created),
+		dunning_amount = VALUES(dunning_amount),
+		dunning_invoices = VALUES(dunning_invoices),
+		email = VALUES(email),
+		expired_subscriptions = VALUES(expired_subscriptions),
+		failed_amount = VALUES(failed_amount),
+		failed_invoices = VALUES(failed_invoices),
+		first_name = VALUES(first_name),
+		last_name = VALUES(last_name),
+		non_renewing_subscriptions = VALUES(non_renewing_subscriptions),
+		on_hold_subscriptions = VALUES(on_hold_subscriptions),
+		pending_additional_cost_amount = VALUES(pending_additional_cost_amount),
+		pending_additional_costs = VALUES(pending_additional_costs),
+		pending_amount = VALUES(pending_amount),
+		pending_credit_amount = VALUES(pending_credit_amount),
+		pending_credits = VALUES(pending_credits),
+		pending_invoices = VALUES(pending_invoices),
+		phone = VALUES(phone),
+		postal_code = VALUES(postal_code),
+		refunded_amount = VALUES(refunded_amount),
+		settled_amount = VALUES(settled_amount),
+		settled_invoices = VALUES(settled_invoices),
+		subscriptions = VALUES(subscriptions),
+		test = VALUES(test),
+		transferred_additional_cost_amount = VALUES(transferred_additional_cost_amount),
+		transferred_additional_costs = VALUES(transferred_additional_costs),
+		transferred_credit_amount = VALUES(transferred_credit_amount),
+		transferred_credits = VALUES(transferred_credits),
+		trial_active_subscriptions = VALUES(trial_active_subscriptions),
+		trial_cancelled_subscriptions = VALUES(trial_cancelled_subscriptions);
 	`
 	_, err := db.Exec(query,
 		customer.Handle, customer.ActiveSubscriptions, customer.Address, customer.Address2, customer.CancelledAmount, customer.CancelledInvoices,
@@ -241,19 +241,19 @@ func CreateOrUpdateInvoice(invoice *Invoice) error {
 		id, handle, customer, currency, created, discount_amount, org_amount,
 		amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, states
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	ON CONFLICT(id) DO UPDATE SET
-		handle = excluded.handle,
-		customer = excluded.customer,
-		currency = excluded.currency,
-		created = excluded.created,
-		discount_amount = excluded.discount_amount,
-		org_amount = excluded.org_amount,
-		amount_vat = excluded.amount_vat,
-		amount_ex_vat = excluded.amount_ex_vat,
-		refunded_amount = excluded.refunded_amount,
-		authorized_amount = excluded.authorized_amount,
-		country = excluded.country,
-		states = excluded.states;
+	ON DUPLICATE KEY UPDATE
+		handle = VALUES(handle),
+		customer = VALUES(customer),
+		currency = VALUES(currency),
+		created = VALUES(created),
+		discount_amount = VALUES(discount_amount),
+		org_amount = VALUES(org_amount),
+		amount_vat = VALUES(amount_vat),
+		amount_ex_vat = VALUES(amount_ex_vat),
+		refunded_amount = VALUES(refunded_amount),
+		authorized_amount = VALUES(authorized_amount),
+		country = VALUES(country),
+		states = VALUES(states);
 	`
 	_, err = db.Exec(query,
 		invoice.ID, invoice.Handle, invoice.Customer, invoice.Currency, invoice.Created, invoice.DiscountAmount, invoice.OrgAmount,

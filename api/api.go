@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -94,7 +95,7 @@ func mapInvoice(r InvoiceResponse, country string) Invoice {
 }
 
 // GetInvoice fetches an invoice from Frisbii API and returns typed Invoice
-func GetInvoice(invoiceId string) (Invoice, error) {
+func GetInvoice(invoiceId string, country string) (Invoice, error) {
 	url := "https://api.frisbii.com/v1/invoice/" + invoiceId
 	cfg := config.LoadConfig()
 
@@ -102,7 +103,18 @@ func GetInvoice(invoiceId string) (Invoice, error) {
 	if err != nil {
 		return Invoice{}, fmt.Errorf("build request: %w", err)
 	}
-	req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+
+	switch country {
+	case "DK":
+		req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+	case "SE":
+		req.SetBasicAuth(cfg.Psp_api_key_se, "")
+	case "NO":
+		req.SetBasicAuth(cfg.Psp_api_key_no, "")
+	default:
+		log.Fatal("unsupported country: " + country)
+	}
+
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)

@@ -18,40 +18,43 @@ type WebhookPayload struct {
 	EventID   string `json:"event_id"`
 }
 
-func webhookHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+func webhookHandler(country string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var payload WebhookPayload
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		fmt.Println(payload.EventType)
+		fmt.Printf("Received webhook for country %s: %+v\n", country, payload)
+
+		// === Process the data ===
+		invoice, err := api.GetInvoice(payload.Invoice, country)
+		if err != nil {
+			log.Printf("Error fetching invoice: %v", err)
+			http.Error(w, "Failed to fetch invoice", http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Printf("Fetched invoice from API: %+v\n", invoice)
+
+		// Respond quickly to the sender
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
 	}
-
-	var payload WebhookPayload
-
-	// Decode JSON body
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	fmt.Printf(payload.EventType)
-	fmt.Printf("Received webhook: %+v\n", payload)
-
-	// === Process the data ===
-	invoice, err := api.GetInvoice(payload.Invoice) // Example usage of the api package
-	if err != nil {
-		log.Fatalf("Error fetching invoice: %v", err)
-	}
-	fmt.Printf("Fetched invoice from api: %+v\n", invoice)
-
-	// Respond quickly to the sender
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
 }
 
 func main() {
-	http.HandleFunc("/webhook/denmark", webhookHandler)
-	http.HandleFunc("/webhook/sweden", webhookHandler)
-	http.HandleFunc("/webhook/norway", webhookHandler)
+	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))
+	http.HandleFunc("/webhook/sweden", webhookHandler("SE"))
+	http.HandleFunc("/webhook/norway", webhookHandler("NO"))
 
 	addr := ":6969"
 	log.Printf("Listening on %s\n", addr)

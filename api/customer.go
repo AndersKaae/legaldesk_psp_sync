@@ -201,7 +201,7 @@ func GetCustomer(customerId string, country string) (Customer, error) {
 }
 
 func GetCustomerList(nextPage string, country string) ([]Customer, string, error) {
-	url := "https://api.frisbii.com/v1/list/customer" // List endpoint
+	url := "https://api.frisbii.com/v1/list/customer?from=2020-01-01" // List endpoint
 
 	cfg := config.LoadConfig()
 

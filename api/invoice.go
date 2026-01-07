@@ -152,7 +152,7 @@ func GetInvoice(invoiceId string, country string) (Invoice, error) {
 }
 
 func GetInvoiceList(nextPage string, country string) ([]Invoice, string, error) {
-	url := "https://api.frisbii.com/v1/list/invoice" // List endpoint
+	url := "https://api.frisbii.com/v1/list/invoice?from=2020-01-01" // List endpoint
 
 	cfg := config.LoadConfig()
 

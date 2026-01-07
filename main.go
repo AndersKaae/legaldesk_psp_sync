@@ -71,21 +71,95 @@ func webhookHandler(country string) http.HandlerFunc {
 
 		if _, found := findStatus(invoiceStatus, payload.EventType); found {
 			log.Printf("Processing invoice event: %s\n", payload.EventType)
-			invoice, err := api.GetInvoice(payload.Invoice, country)
+			apiInvoice, err := api.GetInvoice(payload.Invoice, country)
 			if err != nil {
 				log.Printf("Error fetching invoice: %v", err)
 				http.Error(w, "Failed to fetch invoice", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Fetched invoice from API: %+v\n", invoice)
+			log.Printf("Fetched invoice from API: %+v\n", apiInvoice)
+
+			dbInvoice := database.Invoice{
+				ID:               apiInvoice.ID,
+				Handle:           apiInvoice.Handle,
+				Customer:         apiInvoice.Customer,
+				Currency:         apiInvoice.Currency,
+				Created:          apiInvoice.Created,
+				DiscountAmount:   apiInvoice.DiscountAmount,
+				OrgAmount:        apiInvoice.OrgAmount,
+				AmountVAT:        apiInvoice.AmountVAT,
+				AmountExVAT:      apiInvoice.AmountExVAT,
+				RefundedAmount:   apiInvoice.RefundedAmount,
+				AuthorizedAmount: apiInvoice.AuthorizedAmount,
+				Country:          apiInvoice.Country,
+				States:           database.InvoiceStates(apiInvoice.States),
+			}
+
+			if err := database.CreateOrUpdateInvoice(&dbInvoice); err != nil {
+				log.Printf("Error saving invoice to DB: %v", err)
+				http.Error(w, "Failed to save invoice", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Saved invoice to DB: %+v\n", dbInvoice)
+
 		} else if _, found := findStatus(customerStatus, payload.EventType); found {
-			invoice, err := api.GetCustomer(payload.Customer, country)
+			apiCustomer, err := api.GetCustomer(payload.Customer, country)
 			if err != nil {
 				log.Printf("Error fetching customer: %v", err)
 				http.Error(w, "Failed to fetch customer", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Fetched customer from API: %+v\n", invoice)
+			log.Printf("Fetched customer from API: %+v\n", apiCustomer)
+
+			dbCustomer := database.Customer{
+				ActiveSubscriptions:             apiCustomer.ActiveSubscriptions,
+				Address:                         apiCustomer.Address,
+				Address2:                        apiCustomer.Address2,
+				CancelledAmount:                 apiCustomer.CancelledAmount,
+				CancelledInvoices:               apiCustomer.CancelledInvoices,
+				CancelledSubscriptions:          apiCustomer.CancelledSubscriptions,
+				City:                            apiCustomer.City,
+				Company:                         apiCustomer.Company,
+				Country:                         apiCustomer.Country,
+				Created:                         apiCustomer.Created,
+				DunningAmount:                   apiCustomer.DunningAmount,
+				DunningInvoices:                 apiCustomer.DunningInvoices,
+				Email:                           apiCustomer.Email,
+				ExpiredSubscriptions:            apiCustomer.ExpiredSubscriptions,
+				FailedAmount:                    apiCustomer.FailedAmount,
+				FailedInvoices:                  apiCustomer.FailedInvoices,
+				FirstName:                       apiCustomer.FirstName,
+				Handle:                          apiCustomer.Handle,
+				LastName:                        apiCustomer.LastName,
+				NonRenewingSubscriptions:        apiCustomer.NonRenewingSubscriptions,
+				OnHoldSubscriptions:             apiCustomer.OnHoldSubscriptions,
+				PendingAdditionalCostAmount:     apiCustomer.PendingAdditionalCostAmount,
+				PendingAdditionalCosts:          apiCustomer.PendingAdditionalCosts,
+				PendingAmount:                   apiCustomer.PendingAmount,
+				PendingCreditAmount:             apiCustomer.PendingCreditAmount,
+				PendingCredits:                  apiCustomer.PendingCredits,
+				PendingInvoices:                 apiCustomer.PendingInvoices,
+				Phone:                           apiCustomer.Phone,
+				PostalCode:                      apiCustomer.PostalCode,
+				RefundedAmount:                  apiCustomer.RefundedAmount,
+				SettledAmount:                   apiCustomer.SettledAmount,
+				SettledInvoices:                 apiCustomer.SettledInvoices,
+				Subscriptions:                   apiCustomer.Subscriptions,
+				Test:                            apiCustomer.Test,
+				TransferredAdditionalCostAmount: apiCustomer.TransferredAdditionalCostAmount,
+				TransferredAdditionalCosts:      apiCustomer.TransferredAdditionalCosts,
+				TransferredCreditAmount:         apiCustomer.TransferredCreditAmount,
+				TransferredCredits:              apiCustomer.TransferredCredits,
+				TrialActiveSubscriptions:        apiCustomer.TrialActiveSubscriptions,
+				TrialCancelledSubscriptions:     apiCustomer.TrialCancelledSubscriptions,
+			}
+
+			if err := database.CreateOrUpdateCustomer(&dbCustomer); err != nil {
+				log.Printf("Error saving customer to DB: %v", err)
+				http.Error(w, "Failed to save customer", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Saved customer to DB: %+v\n", dbCustomer)
 		} else {
 			log.Printf("Unknown event type: %s\n", payload.EventType)
 		}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
-	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"log"
 	"net/http"
 )

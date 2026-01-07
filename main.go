@@ -175,8 +175,9 @@ func webhookHandler(country string) http.HandlerFunc {
 }
 
 // backfillCustomersForCountry fetches and saves all customers for a given country
-func backfillCustomersForCountry(country string) {
+func backfillCustomersForCountry(country string) int {
 	log.Printf("Starting customer backfill for country: %s", country)
+	customerCount := 0
 	nextPage := ""
 	for {
 		customers, newNextPage, err := api.GetCustomerList(nextPage, country)
@@ -232,6 +233,7 @@ func backfillCustomersForCountry(country string) {
 				log.Printf("Error saving backfilled customer %s to DB for %s: %v", apiCustomer.Handle, country, err)
 			} else {
 				log.Printf("Backfilled customer %s for %s", apiCustomer.Handle, country)
+				customerCount++
 			}
 		}
 
@@ -242,11 +244,13 @@ func backfillCustomersForCountry(country string) {
 		time.Sleep(100 * time.Millisecond) // Be nice to the API
 	}
 	log.Printf("Finished customer backfill for country: %s", country)
+	return customerCount
 }
 
 // backfillInvoicesForCountry fetches and saves all invoices for a given country
-func backfillInvoicesForCountry(country string) {
+func backfillInvoicesForCountry(country string) int {
 	log.Printf("Starting invoice backfill for country: %s", country)
+	invoiceCount := 0
 	nextPage := ""
 	for {
 		invoices, newNextPage, err := api.GetInvoiceList(nextPage, country)
@@ -275,6 +279,7 @@ func backfillInvoicesForCountry(country string) {
 				log.Printf("Error saving backfilled invoice %s to DB for %s: %v", apiInvoice.ID, country, err)
 			} else {
 				log.Printf("Backfilled invoice %s for %s", apiInvoice.ID, country)
+				invoiceCount++
 			}
 		}
 
@@ -285,16 +290,19 @@ func backfillInvoicesForCountry(country string) {
 		time.Sleep(100 * time.Millisecond) // Be nice to the API
 	}
 	log.Printf("Finished invoice backfill for country: %s", country)
+	return invoiceCount
 }
 
 func runBackfill() {
 	log.Println("Starting full backfill process...")
+	totalCustomersBackfilled := 0
+	totalInvoicesBackfilled := 0
 	countries := []string{"DK", "SE", "NO"}
 	for _, country := range countries {
-		backfillCustomersForCountry(country)
-		backfillInvoicesForCountry(country)
+		totalCustomersBackfilled += backfillCustomersForCountry(country)
+		totalInvoicesBackfilled += backfillInvoicesForCountry(country)
 	}
-	log.Println("Full backfill process finished.")
+	log.Printf("Full backfill process finished. Total Customers Backfilled: %d, Total Invoices Backfilled: %d", totalCustomersBackfilled, totalInvoicesBackfilled)
 }
 
 func main() {

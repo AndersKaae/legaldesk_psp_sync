@@ -34,7 +34,7 @@ func main() {
 	http.HandleFunc("/webhook/sweden/transactions", webhookHandler)
 	http.HandleFunc("/webhook/norway/transactions", webhookHandler)
 
-	addr := ":8080"
+	addr := ":6969"
 	log.Printf("Listening on %s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

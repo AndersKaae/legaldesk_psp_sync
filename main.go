@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
+	"github.com/AndersKaae/legaldesk_psp_sync/config"
+	"github.com/AndersKaae/legaldesk_psp_sync/database"
 	"io"
 	"log"
 	"net/http"
@@ -93,6 +95,11 @@ func main() {
 	// Create a multi-writer to write to both stdout and the log file
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
+
+	cfg := config.LoadConfig()
+	if err := database.InitDB(cfg); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
 	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))
 	http.HandleFunc("/webhook/sweden", webhookHandler("SE"))

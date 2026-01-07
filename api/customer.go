@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-
 // CustomerResponse models the customer API response.
 type CustomerResponse struct {
 	ActiveSubscriptions             int       `json:"active_subscriptions"`

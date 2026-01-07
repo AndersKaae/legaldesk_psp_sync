@@ -1,30 +1,42 @@
 package main
 
 import (
-	"io"
+	"encoding/json"
 	"log"
 	"net/http"
 )
 
+type WebhookPayload struct {
+	ID        string `json:"id"`
+	Timestamp string `json:"timestamp"`
+	Signature string `json:"signature"`
+	Invoice   string `json:"invoice"`
+	Customer  string `json:"customer"`
+	EventType string `json:"event_type"`
+	EventID   string `json:"event_id"`
+}
+
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
-	// Only allow POST
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Read request body
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Failed to read body", http.StatusBadRequest)
+	var payload WebhookPayload
+
+	// Decode JSON body
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	// Log the webhook payload
-	log.Printf("Received webhook: %s\n", string(body))
+	fmt.Printf("Received webhook: %+v\n", payload)
 
-	// Respond to sender
+	// === Process the data ===
+	//processWebhook(payload)
+
+	// Respond quickly to the sender
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
 }

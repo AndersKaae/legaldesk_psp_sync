@@ -54,6 +54,13 @@ type CustomerResponse struct {
 	TrialCancelledSubscriptions     int       `json:"trial_cancelled_subscriptions"`
 }
 
+// CustomerListResponse models the customer list API response
+type CustomerListResponse struct {
+	Customers []CustomerResponse `json:"customers"` // Assuming "customers" is the key for the list
+	NextPage  string             `json:"next_page"`
+	HasMore   bool               `json:"has_more"` // Assuming API returns this for completeness, though NextPage is sufficient
+}
+
 // Customer is your domain model
 type Customer struct {
 	ActiveSubscriptions             int
@@ -74,7 +81,7 @@ type Customer struct {
 	FailedInvoices                  int
 	FirstName                       string
 	Handle                          string
-	LastName                        string
+	LastName                       string
 	NonRenewingSubscriptions        int
 	OnHoldSubscriptions             int
 	PendingAdditionalCostAmount     int64
@@ -191,4 +198,62 @@ func GetCustomer(customerId string, country string) (Customer, error) {
 	}
 
 	return mapCustomer(apiResp), nil
+}
+
+func GetCustomerList(nextPage string, country string) ([]Customer, string, error) {
+	url := "https://api.frisbii.com/v1/customer" // List endpoint
+
+	cfg := config.LoadConfig()
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("build request: %w", err)
+	}
+
+	// Add next_page token if provided
+	if nextPage != "" {
+		q := req.URL.Query()
+		q.Add("next_page", nextPage)
+		req.URL.RawQuery = q.Encode()
+	}
+
+	switch country {
+	case "DK":
+		req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+	case "SE":
+		req.SetBasicAuth(cfg.Psp_api_key_se, "")
+	case "NO":
+		req.SetBasicAuth(cfg.Psp_api_key_no, "")
+	default:
+		return nil, "", fmt.Errorf("unsupported country: %s", country)
+	}
+
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp CustomerListResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, "", fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	customers := make([]Customer, len(apiResp.Customers))
+	for i, r := range apiResp.Customers {
+		customers[i] = mapCustomer(r)
+	}
+
+	return customers, apiResp.NextPage, nil
 }

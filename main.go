@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"github.com/AndersKaae/legaldesk_psp_sync/database"
@@ -9,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time" // Added for time.Sleep
 )
 
 type WebhookPayload struct {
@@ -27,6 +30,8 @@ type WebhookPayload struct {
 	CreditNote             string `json:"credit_note"`
 	Credit                 string `json:"credit"`
 }
+
+var backfillFlag = flag.Bool("backfill", false, "Run backfill process to populate old data")
 
 func setupLogging() {
 	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -170,12 +175,141 @@ func webhookHandler(country string) http.HandlerFunc {
 	}
 }
 
+// backfillCustomersForCountry fetches and saves all customers for a given country
+func backfillCustomersForCountry(country string) {
+	log.Printf("Starting customer backfill for country: %s", country)
+	nextPage := ""
+	for {
+		customers, newNextPage, err := api.GetCustomerList(nextPage, country)
+		if err != nil {
+			log.Printf("Error fetching customer list for %s (nextPage: %s): %v", country, nextPage, err)
+			break // Stop backfill for this country on error
+		}
+
+		for _, apiCustomer := range customers {
+			dbCustomer := database.Customer{
+				ActiveSubscriptions:             apiCustomer.ActiveSubscriptions,
+				Address:                         apiCustomer.Address,
+				Address2:                        apiCustomer.Address2,
+				CancelledAmount:                 apiCustomer.CancelledAmount,
+				CancelledInvoices:               apiCustomer.CancelledInvoices,
+				CancelledSubscriptions:          apiCustomer.CancelledSubscriptions,
+				City:                            apiCustomer.City,
+				Company:                         apiCustomer.Company,
+				Country:                         apiCustomer.Country,
+				Created:                         apiCustomer.Created,
+				DunningAmount:                   apiCustomer.DunningAmount,
+				DunningInvoices:                 apiCustomer.DunningInvoices,
+				Email:                           apiCustomer.Email,
+				ExpiredSubscriptions:            apiCustomer.ExpiredSubscriptions,
+				FailedAmount:                    apiCustomer.FailedAmount,
+				FailedInvoices:                  apiCustomer.FailedInvoices,
+				FirstName:                       apiCustomer.FirstName,
+				Handle:                          apiCustomer.Handle,
+				LastName:                        apiCustomer.LastName,
+				NonRenewingSubscriptions:        apiCustomer.NonRenewingSubscriptions,
+				OnHoldSubscriptions:             apiCustomer.OnHoldSubscriptions,
+				PendingAdditionalCostAmount:     apiCustomer.PendingAdditionalCostAmount,
+				PendingAdditionalCosts:          apiCustomer.PendingAdditionalCosts,
+				PendingAmount:                   apiCustomer.PendingAmount,
+				PendingCreditAmount:             apiCustomer.PendingCreditAmount,
+				PendingCredits:                  apiCustomer.PendingCredits,
+				PendingInvoices:                 apiCustomer.PendingInvoices,
+				Phone:                           apiCustomer.Phone,
+				PostalCode:                      apiCustomer.PostalCode,
+				RefundedAmount:                  apiCustomer.RefundedAmount,
+				SettledAmount:                   apiCustomer.SettledAmount,
+				SettledInvoices:                 apiCustomer.SettledInvoices,
+				Subscriptions:                   apiCustomer.Subscriptions,
+				Test:                            apiCustomer.Test,
+				TransferredAdditionalCostAmount: apiCustomer.TransferredAdditionalCostAmount,
+				TransferredAdditionalCosts:      apiCustomer.TransferredAdditionalCosts,
+				TransferredCreditAmount:         apiCustomer.TransferredCreditAmount,
+				TransferredCredits:              apiCustomer.TransferredCredits,
+				TrialActiveSubscriptions:        apiCustomer.TrialActiveSubscriptions,
+				TrialCancelledSubscriptions:     apiCustomer.TrialCancelledSubscriptions,
+			}
+			if err := database.CreateOrUpdateCustomer(&dbCustomer); err != nil {
+				log.Printf("Error saving backfilled customer %s to DB for %s: %v", apiCustomer.Handle, country, err)
+			} else {
+				log.Printf("Backfilled customer %s for %s", apiCustomer.Handle, country)
+			}
+		}
+
+		if newNextPage == "" {
+			break // No more pages
+		}
+		nextPage = newNextPage
+		time.Sleep(100 * time.Millisecond) // Be nice to the API
+	}
+	log.Printf("Finished customer backfill for country: %s", country)
+}
+
+// backfillInvoicesForCountry fetches and saves all invoices for a given country
+func backfillInvoicesForCountry(country string) {
+	log.Printf("Starting invoice backfill for country: %s", country)
+	nextPage := ""
+	for {
+		invoices, newNextPage, err := api.GetInvoiceList(nextPage, country)
+		if err != nil {
+			log.Printf("Error fetching invoice list for %s (nextPage: %s): %v", country, nextPage, err)
+			break // Stop backfill for this country on error
+		}
+
+		for _, apiInvoice := range invoices {
+			dbInvoice := database.Invoice{
+				ID:               apiInvoice.ID,
+				Handle:           apiInvoice.Handle,
+				Customer:         apiInvoice.Customer,
+				Currency:         apiInvoice.Currency,
+				Created:          apiInvoice.Created,
+				DiscountAmount:   apiInvoice.DiscountAmount,
+				OrgAmount:        apiInvoice.OrgAmount,
+				AmountVAT:        apiInvoice.AmountVAT,
+				AmountExVAT:      apiInvoice.AmountExVAT,
+				RefundedAmount:   apiInvoice.RefundedAmount,
+				AuthorizedAmount: apiInvoice.AuthorizedAmount,
+				Country:          apiInvoice.Country,
+				States:           database.InvoiceStates(apiInvoice.States),
+			}
+			if err := database.CreateOrUpdateInvoice(&dbInvoice); err != nil {
+				log.Printf("Error saving backfilled invoice %s to DB for %s: %v", apiInvoice.ID, country, err)
+			} else {
+				log.Printf("Backfilled invoice %s for %s", apiInvoice.ID, country)
+			}
+		}
+
+		if newNextPage == "" {
+			break // No more pages
+		}
+		nextPage = newNextPage
+		time.Sleep(100 * time.Millisecond) // Be nice to the API
+	}
+	log.Printf("Finished invoice backfill for country: %s", country)
+}
+
+func runBackfill() {
+	log.Println("Starting full backfill process...")
+	countries := []string{"DK", "SE", "NO"}
+	for _, country := range countries {
+		backfillCustomersForCountry(country)
+		backfillInvoicesForCountry(country)
+	}
+	log.Println("Full backfill process finished.")
+}
+
 func main() {
+	flag.Parse() // Parse command-line flags
+
 	setupLogging()
 
 	cfg := config.LoadConfig()
 	if err := database.InitDB(cfg); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	if *backfillFlag {
+		go runBackfill() // Run backfill in a goroutine
 	}
 
 	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))

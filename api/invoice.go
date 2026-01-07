@@ -34,6 +34,13 @@ type InvoiceResponse struct {
 	Transactions     []Transaction `json:"transactions"`
 }
 
+// InvoiceListResponse models the invoice list API response
+type InvoiceListResponse struct {
+	Invoices []InvoiceResponse `json:"invoices"` // Assuming "invoices" is the key for the list
+	NextPage string            `json:"next_page"`
+	HasMore  bool              `json:"has_more"`
+}
+
 // InvoiceStates maps state names to timestamps (nil if not occurred)
 type InvoiceStates map[string]*time.Time
 
@@ -142,4 +149,62 @@ func GetInvoice(invoiceId string, country string) (Invoice, error) {
 
 	// Country is implied from API usage
 	return mapInvoice(apiResp, "DK"), nil
+}
+
+func GetInvoiceList(nextPage string, country string) ([]Invoice, string, error) {
+	url := "https://api.frisbii.com/v1/invoice" // List endpoint
+
+	cfg := config.LoadConfig()
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("build request: %w", err)
+	}
+
+	// Add next_page token if provided
+	if nextPage != "" {
+		q := req.URL.Query()
+		q.Add("next_page", nextPage)
+		req.URL.RawQuery = q.Encode()
+	}
+
+	switch country {
+	case "DK":
+		req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+	case "SE":
+		req.SetBasicAuth(cfg.Psp_api_key_se, "")
+	case "NO":
+		req.SetBasicAuth(cfg.Psp_api_key_no, "")
+	default:
+		return nil, "", fmt.Errorf("unsupported country: %s", country)
+	}
+
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("read body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var apiResp InvoiceListResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, "", fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	invoices := make([]Invoice, len(apiResp.Invoices))
+	for i, r := range apiResp.Invoices {
+		invoices[i] = mapInvoice(r, country) // Pass country here
+	}
+
+	return invoices, apiResp.NextPage, nil
 }

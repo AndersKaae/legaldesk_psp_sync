@@ -88,12 +88,6 @@ func main() {
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
 
-	result, err := api.GetCustomer("cust-85779")
-	if err != nil {
-		log.Fatalf("Error fetching customer: %v", err)
-	}
-	log.Printf("Fetched customer from API: %+v\n", result)
-
 	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))
 	http.HandleFunc("/webhook/sweden", webhookHandler("SE"))
 	http.HandleFunc("/webhook/norway", webhookHandler("NO"))

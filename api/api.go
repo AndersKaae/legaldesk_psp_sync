@@ -129,7 +129,7 @@ func GetInvoice(invoiceId string, country string) (Invoice, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return Invoice{}, nil
+		return Invoice{}, fmt.Errorf("invoice %s not found", invoiceId)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return Invoice{}, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))

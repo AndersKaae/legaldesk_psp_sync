@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
+	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type WebhookPayload struct {
@@ -16,6 +17,15 @@ type WebhookPayload struct {
 	Customer  string `json:"customer"`
 	EventType string `json:"event_type"`
 	EventID   string `json:"event_id"`
+}
+
+func findStatus(statuses []string, target string) (string, bool) {
+	for _, v := range statuses {
+		if v == target {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 func webhookHandler(country string) http.HandlerFunc {
@@ -32,18 +42,26 @@ func webhookHandler(country string) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 
-		fmt.Printf("EventType: %s\nReceived webhook for country %s: %+v\n",
+		log.Printf("EventType: %s\nReceived webhook for country %s: %+v\n",
 			payload.EventType, country, payload)
 
 		// === Process the data ===
-		invoice, err := api.GetInvoice(payload.Invoice, country)
-		if err != nil {
-			log.Printf("Error fetching invoice: %v", err)
-			http.Error(w, "Failed to fetch invoice", http.StatusInternalServerError)
-			return
+		invoiceStatus := []string{"invoice_created", "invoice_authorized", "invoice_settled", "invoice_failed", "invoice_refund"}
+		customerStatus := []string{"customer_created"}
+		if _, found := findStatus(invoiceStatus, payload.EventType); found {
+			log.Printf("Processing invoice event: %s\n", payload.EventType)
+			invoice, err := api.GetInvoice(payload.Invoice, country)
+			if err != nil {
+				log.Printf("Error fetching invoice: %v", err)
+				http.Error(w, "Failed to fetch invoice", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Fetched invoice from API: %+v\n", invoice)
+		} else if _, found := findStatus(customerStatus, payload.EventType); found {
+			log.Printf("Processing customer event: %s\n", payload.EventType)
+		} else {
+			log.Printf("Unknown event type: %s\n", payload.EventType)
 		}
-
-		fmt.Printf("Fetched invoice from API: %+v\n", invoice)
 
 		// Respond quickly to the sender
 		w.WriteHeader(http.StatusOK)
@@ -52,6 +70,16 @@ func webhookHandler(country string) http.HandlerFunc {
 }
 
 func main() {
+	// Open a file for logging
+	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+
+	// Create a multi-writer to write to both stdout and the log file
+	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw)
+
 	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))
 	http.HandleFunc("/webhook/sweden", webhookHandler("SE"))
 	http.HandleFunc("/webhook/norway", webhookHandler("NO"))

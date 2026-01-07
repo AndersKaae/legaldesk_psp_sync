@@ -10,13 +10,20 @@ import (
 )
 
 type WebhookPayload struct {
-	ID        string `json:"id"`
-	Timestamp string `json:"timestamp"`
-	Signature string `json:"signature"`
-	Invoice   string `json:"invoice"`
-	Customer  string `json:"customer"`
-	EventType string `json:"event_type"`
-	EventID   string `json:"event_id"`
+	ID                     string `json:"id"`
+	Timestamp              string `json:"timestamp"`
+	Signature              string `json:"signature"`
+	Invoice                string `json:"invoice"`
+	Customer               string `json:"customer"`
+	EventType              string `json:"event_type"`
+	EventID                string `json:"event_id"`
+	PaymentMethod          string `json:"payment_method"`
+	PaymentMethodReference string `json:"payment_method_reference"`
+	Subscription           string `json:"subscription"`
+	Dispute                string `json:"dispute"`
+	Transaction            string `json:"transaction"`
+	CreditNote             string `json:"credit_note"`
+	Credit                 string `json:"credit"`
 }
 
 func findStatus(statuses []string, target string) (string, bool) {
@@ -45,9 +52,10 @@ func webhookHandler(country string) http.HandlerFunc {
 		log.Printf("EventType: %s\nReceived webhook for country %s: %+v\n",
 			payload.EventType, country, payload)
 
-		// === Process the data ===
+		// Process the data
 		invoiceStatus := []string{"invoice_created", "invoice_authorized", "invoice_settled", "invoice_failed", "invoice_refund"}
-		customerStatus := []string{"customer_created"}
+		customerStatus := []string{"customer_created", "customer_deleted", "customer_changed"}
+
 		if _, found := findStatus(invoiceStatus, payload.EventType); found {
 			log.Printf("Processing invoice event: %s\n", payload.EventType)
 			invoice, err := api.GetInvoice(payload.Invoice, country)
@@ -79,6 +87,12 @@ func main() {
 	// Create a multi-writer to write to both stdout and the log file
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
+
+	result, err := api.GetCustomer("cust-85779")
+	if err != nil {
+		log.Fatalf("Error fetching customer: %v", err)
+	}
+	log.Printf("Fetched customer from API: %+v\n", result)
 
 	http.HandleFunc("/webhook/denmark", webhookHandler("DK"))
 	http.HandleFunc("/webhook/sweden", webhookHandler("SE"))

@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/AndersKaae/legaldesk_psp_sync/api"
+	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"log"
 	"net/http"
 )
@@ -35,7 +37,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Received webhook: %+v\n", payload)
 
 	// === Process the data ===
-	//processWebhook(payload)
+	result, err := api.GetInvoice(payload.Invoice) // Example usage of the api package
+	if err != nil {
+		log.Fatalf("Error fetching invoice: %v", err)
+	}
+	fmt.Printf("Fetched invoice from webhook: %+v\n", result)
 
 	// Respond quickly to the sender
 	w.WriteHeader(http.StatusOK)

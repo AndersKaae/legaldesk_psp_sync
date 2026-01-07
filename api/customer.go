@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -52,7 +53,7 @@ type Customer struct {
 	TrialCancelledSubscriptions     int       `json:"trial_cancelled_subscriptions"`
 }
 
-func GetCustomer(customerId string) (map[string]any, error) {
+func GetCustomer(customerId string, country string) (map[string]any, error) {
 	url := "https://api.frisbii.com/v1/customer/" + customerId
 
 	cfg := config.LoadConfig()
@@ -61,7 +62,18 @@ func GetCustomer(customerId string) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+
+	switch country {
+	case "DK":
+		req.SetBasicAuth(cfg.Psp_api_key_dk, "")
+	case "SE":
+		req.SetBasicAuth(cfg.Psp_api_key_se, "")
+	case "NO":
+		req.SetBasicAuth(cfg.Psp_api_key_no, "")
+	default:
+		log.Fatal("unsupported country: " + country)
+	}
+
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)

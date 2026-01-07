@@ -56,8 +56,8 @@ type CustomerResponse struct {
 
 // CustomerListResponse models the customer list API response
 type CustomerListResponse struct {
-	Customers []CustomerResponse `json:"customers"` // Assuming "customers" is the key for the list
-	NextPage  string             `json:"next_page"`
+	Customers []CustomerResponse `json:"content"` // Assuming "content" is the key for the list
+	NextPage  string             `json:"next_page_token"`
 	HasMore   bool               `json:"has_more"` // Assuming API returns this for completeness, though NextPage is sufficient
 }
 
@@ -213,7 +213,7 @@ func GetCustomerList(nextPage string, country string) ([]Customer, string, error
 	// Add next_page token if provided
 	if nextPage != "" {
 		q := req.URL.Query()
-		q.Add("next_page", nextPage)
+		q.Add("next_page_token", nextPage)
 		req.URL.RawQuery = q.Encode()
 	}
 

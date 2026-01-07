@@ -28,6 +28,17 @@ type WebhookPayload struct {
 	Credit                 string `json:"credit"`
 }
 
+func setupLogging() {
+	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+
+	// Create a multi-writer to write to both stdout and the log file
+	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw)
+}
+
 func findStatus(statuses []string, target string) (string, bool) {
 	for _, v := range statuses {
 		if v == target {
@@ -86,15 +97,7 @@ func webhookHandler(country string) http.HandlerFunc {
 }
 
 func main() {
-	// Open a file for logging
-	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
-
-	// Create a multi-writer to write to both stdout and the log file
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
+	setupLogging()
 
 	cfg := config.LoadConfig()
 	if err := database.InitDB(cfg); err != nil {

@@ -81,7 +81,7 @@ type Customer struct {
 	FailedInvoices                  int
 	FirstName                       string
 	Handle                          string
-	LastName                       string
+	LastName                        string
 	NonRenewingSubscriptions        int
 	OnHoldSubscriptions             int
 	PendingAdditionalCostAmount     int64
@@ -201,7 +201,7 @@ func GetCustomer(customerId string, country string) (Customer, error) {
 }
 
 func GetCustomerList(nextPage string, country string) ([]Customer, string, error) {
-	url := "https://api.frisbii.com/v1/customer" // List endpoint
+	url := "https://api.frisbii.com/v1/list/customer" // List endpoint
 
 	cfg := config.LoadConfig()
 

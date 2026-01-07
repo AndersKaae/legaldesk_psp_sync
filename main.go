@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"github.com/AndersKaae/legaldesk_psp_sync/database"

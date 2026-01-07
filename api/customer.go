@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-type Customer struct {
+
+// CustomerResponse models the customer API response.
+type CustomerResponse struct {
 	ActiveSubscriptions             int       `json:"active_subscriptions"`
 	Address                         string    `json:"address"`
 	Address2                        string    `json:"address2"`
@@ -53,14 +55,104 @@ type Customer struct {
 	TrialCancelledSubscriptions     int       `json:"trial_cancelled_subscriptions"`
 }
 
-func GetCustomer(customerId string, country string) (map[string]any, error) {
+// Customer is your domain model
+type Customer struct {
+	ActiveSubscriptions             int
+	Address                         string
+	Address2                        string
+	CancelledAmount                 int64
+	CancelledInvoices               int
+	CancelledSubscriptions          int
+	City                            string
+	Company                         string
+	Country                         string
+	Created                         time.Time
+	DunningAmount                   int64
+	DunningInvoices                 int
+	Email                           string
+	ExpiredSubscriptions            int
+	FailedAmount                    int64
+	FailedInvoices                  int
+	FirstName                       string
+	Handle                          string
+	LastName                        string
+	NonRenewingSubscriptions        int
+	OnHoldSubscriptions             int
+	PendingAdditionalCostAmount     int64
+	PendingAdditionalCosts          int
+	PendingAmount                   int64
+	PendingCreditAmount             int64
+	PendingCredits                  int
+	PendingInvoices                 int
+	Phone                           string
+	PostalCode                      string
+	RefundedAmount                  int64
+	SettledAmount                   int64
+	SettledInvoices                 int
+	Subscriptions                   int
+	Test                            bool
+	TransferredAdditionalCostAmount int64
+	TransferredAdditionalCosts      int
+	TransferredCreditAmount         int64
+	TransferredCredits              int
+	TrialActiveSubscriptions        int
+	TrialCancelledSubscriptions     int
+}
+
+// mapCustomer maps API response -> domain Customer
+func mapCustomer(r CustomerResponse) Customer {
+	return Customer{
+		ActiveSubscriptions:             r.ActiveSubscriptions,
+		Address:                         r.Address,
+		Address2:                        r.Address2,
+		CancelledAmount:                 r.CancelledAmount,
+		CancelledInvoices:               r.CancelledInvoices,
+		CancelledSubscriptions:          r.CancelledSubscriptions,
+		City:                            r.City,
+		Company:                         r.Company,
+		Country:                         r.Country,
+		Created:                         r.Created,
+		DunningAmount:                   r.DunningAmount,
+		DunningInvoices:                 r.DunningInvoices,
+		Email:                           r.Email,
+		ExpiredSubscriptions:            r.ExpiredSubscriptions,
+		FailedAmount:                    r.FailedAmount,
+		FailedInvoices:                  r.FailedInvoices,
+		FirstName:                       r.FirstName,
+		Handle:                          r.Handle,
+		LastName:                        r.LastName,
+		NonRenewingSubscriptions:        r.NonRenewingSubscriptions,
+		OnHoldSubscriptions:             r.OnHoldSubscriptions,
+		PendingAdditionalCostAmount:     r.PendingAdditionalCostAmount,
+		PendingAdditionalCosts:          r.PendingAdditionalCosts,
+		PendingAmount:                   r.PendingAmount,
+		PendingCreditAmount:             r.PendingCreditAmount,
+		PendingCredits:                  r.PendingCredits,
+		PendingInvoices:                 r.PendingInvoices,
+		Phone:                           r.Phone,
+		PostalCode:                      r.PostalCode,
+		RefundedAmount:                  r.RefundedAmount,
+		SettledAmount:                   r.SettledAmount,
+		SettledInvoices:                 r.SettledInvoices,
+		Subscriptions:                   r.Subscriptions,
+		Test:                            r.Test,
+		TransferredAdditionalCostAmount: r.TransferredAdditionalCostAmount,
+		TransferredAdditionalCosts:      r.TransferredAdditionalCosts,
+		TransferredCreditAmount:         r.TransferredCreditAmount,
+		TransferredCredits:              r.TransferredCredits,
+		TrialActiveSubscriptions:        r.TrialActiveSubscriptions,
+		TrialCancelledSubscriptions:     r.TrialCancelledSubscriptions,
+	}
+}
+
+func GetCustomer(customerId string, country string) (Customer, error) {
 	url := "https://api.frisbii.com/v1/customer/" + customerId
 
 	cfg := config.LoadConfig()
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return Customer{}, fmt.Errorf("build request: %w", err)
 	}
 
 	switch country {
@@ -78,30 +170,26 @@ func GetCustomer(customerId string, country string) (map[string]any, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return Customer{}, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+		return Customer{}, fmt.Errorf("read body: %w", err)
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return map[string]any{}, fmt.Errorf("customer %s not found", customerId)
+		return Customer{}, fmt.Errorf("customer %s not found", customerId)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		return Customer{}, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var data map[string]any
-	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
+	var apiResp CustomerResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return Customer{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	// Pretty-print so you can inspect it easily
-	pretty, _ := json.MarshalIndent(data, "", "  ")
-	fmt.Println(string(pretty))
-
-	return data, nil
+	return mapCustomer(apiResp), nil
 }

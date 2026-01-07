@@ -66,7 +66,13 @@ func webhookHandler(country string) http.HandlerFunc {
 			}
 			log.Printf("Fetched invoice from API: %+v\n", invoice)
 		} else if _, found := findStatus(customerStatus, payload.EventType); found {
-			log.Printf("Processing customer event: %s\n", payload.EventType)
+			invoice, err := api.GetCustomer(payload.Customer, country)
+			if err != nil {
+				log.Printf("Error fetching customer: %v", err)
+				http.Error(w, "Failed to fetch customer", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Fetched customer from API: %+v\n", invoice)
 		} else {
 			log.Printf("Unknown event type: %s\n", payload.EventType)
 		}

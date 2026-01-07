@@ -33,7 +33,7 @@ func webhookHandler(country string) http.HandlerFunc {
 		defer r.Body.Close()
 
 		fmt.Println(payload.EventType)
-		fmt.Printf("Received webhook for country %s: %+v\n", country, payload)
+		fmt.Printf("\nReceived webhook for country %s: %+v\n", country, payload)
 
 		// === Process the data ===
 		invoice, err := api.GetInvoice(payload.Invoice, country)

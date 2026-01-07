@@ -33,14 +33,15 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	fmt.Printf(payload.EventType)
 	fmt.Printf("Received webhook: %+v\n", payload)
 
 	// === Process the data ===
-	result, err := api.GetInvoice(payload.Invoice) // Example usage of the api package
+	invoice, err := api.GetInvoice(payload.Invoice) // Example usage of the api package
 	if err != nil {
 		log.Fatalf("Error fetching invoice: %v", err)
 	}
-	fmt.Printf("Fetched invoice from webhook: %+v\n", result)
+	fmt.Printf("Fetched invoice from api: %+v\n", invoice)
 
 	// Respond quickly to the sender
 	w.WriteHeader(http.StatusOK)
@@ -48,9 +49,9 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/webhook/denmark/transactions", webhookHandler)
-	http.HandleFunc("/webhook/sweden/transactions", webhookHandler)
-	http.HandleFunc("/webhook/norway/transactions", webhookHandler)
+	http.HandleFunc("/webhook/denmark", webhookHandler)
+	http.HandleFunc("/webhook/sweden", webhookHandler)
+	http.HandleFunc("/webhook/norway", webhookHandler)
 
 	addr := ":6969"
 	log.Printf("Listening on %s\n", addr)

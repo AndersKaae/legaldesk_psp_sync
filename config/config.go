@@ -12,6 +12,8 @@ type Config struct {
 	Psp_api_key_no string
 	DatabaseDSN    string
 	Backfill_from  string
+	BasicAuthUser  string
+	BasicAuthPass  string
 }
 
 func loadEnvFile() {
@@ -29,6 +31,8 @@ func LoadConfig() Config {
 		Psp_api_key_no: mustGetenv("PSP_API_KEY_NO"),
 		DatabaseDSN:    mustGetenv("DATABASE_DSN"),
 		Backfill_from:  mustGetenv("BACKFILL_FROM"),
+		BasicAuthUser:  mustGetenv("BASIC_AUTH_USER"),
+		BasicAuthPass:  mustGetenv("BASIC_AUTH_PASS"),
 	}
 	return cfg
 }

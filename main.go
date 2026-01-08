@@ -173,7 +173,7 @@ func main() {
 		go runBackfill() // Run backfill in a goroutine
 	}
 
-	http.HandleFunc("/invoices/", handlers.Invoices())
+	http.HandleFunc("/invoices/", handlers.RequireBasicAuth(handlers.Invoices(), cfg.BasicAuthUser, cfg.BasicAuthPass))
 	http.HandleFunc("/webhook/denmark", handlers.Webhook("DK"))
 	http.HandleFunc("/webhook/sweden", handlers.Webhook("SE"))
 	http.HandleFunc("/webhook/norway", handlers.Webhook("NO"))

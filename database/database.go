@@ -287,3 +287,41 @@ func CreateOrUpdateInvoice(invoice *Invoice) error {
 	)
 	return err
 }
+
+func GetInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
+	query := `
+	SELECT id, handle, customer, currency, created, discount_amount, org_amount,
+	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, states
+	FROM invoices WHERE created >= ? AND created <= ?
+	`
+	rows, err := db.Query(query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query invoices by date range: %w", err)
+	}
+	defer rows.Close()
+
+	var invoices []Invoice
+	for rows.Next() {
+		var invoice Invoice
+		var statesJSON []byte
+		if err := rows.Scan(
+			&invoice.ID, &invoice.Handle, &invoice.Customer, &invoice.Currency, &invoice.Created,
+			&invoice.DiscountAmount, &invoice.OrgAmount, &invoice.AmountVAT, &invoice.AmountExVAT,
+			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &statesJSON,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan invoice row: %w", err)
+		}
+
+		if err := json.Unmarshal(statesJSON, &invoice.States); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal invoice states: %w", err)
+		}
+		invoices = append(invoices, invoice)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during rows iteration: %w", err)
+	}
+
+	return invoices, nil
+}
+

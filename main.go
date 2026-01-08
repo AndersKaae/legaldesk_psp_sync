@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time" // Added for time.Sleep
+	"time"
 
 	"github.com/AndersKaae/legaldesk_psp_sync/api"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"

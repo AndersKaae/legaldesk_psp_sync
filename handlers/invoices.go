@@ -1,7 +1,9 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
+	"github.com/AndersKaae/legaldesk_psp_sync/database"
+	"log"
 	"net/http"
 	"time"
 )
@@ -41,6 +43,17 @@ func Invoices() http.HandlerFunc {
 			return
 		}
 
-		fmt.Fprintf(w, "Fetching invoices from %s to %s", from.Format(layout), to.Format(layout))
+		invoices, err := database.GetInvoicesByDateRange(from, to)
+		if err != nil {
+			log.Printf("Failed to fetch invoices: %v", err)
+			http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(invoices); err != nil {
+			log.Printf("Failed to encode invoices to JSON: %v", err)
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
 	}
 }

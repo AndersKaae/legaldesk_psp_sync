@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"github.com/AndersKaae/legaldesk_psp_sync/api"
-	"github.com/AndersKaae/legaldesk_psp_sync/config"
-	"github.com/AndersKaae/legaldesk_psp_sync/database"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"time" // Added for time.Sleep
+
+	"github.com/AndersKaae/legaldesk_psp_sync/api"
+	"github.com/AndersKaae/legaldesk_psp_sync/config"
+	"github.com/AndersKaae/legaldesk_psp_sync/database"
 )
 
 type WebhookPayload struct {

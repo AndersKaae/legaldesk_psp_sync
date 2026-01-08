@@ -36,8 +36,8 @@ type InvoiceResponse struct {
 
 // InvoiceListResponse models the invoice list API response
 type InvoiceListResponse struct {
-	Invoices []InvoiceResponse `json:"invoices"` // Assuming "invoices" is the key for the list
-	NextPage string            `json:"next_page"`
+	Invoices []InvoiceResponse `json:"content"` // Assuming "content" is the key for the list
+	NextPage string            `json:"next_page_token"`
 	HasMore  bool              `json:"has_more"`
 }
 
@@ -152,7 +152,7 @@ func GetInvoice(invoiceId string, country string) (Invoice, error) {
 }
 
 func GetInvoiceList(nextPage string, country string) ([]Invoice, string, error) {
-	url := "https://api.frisbii.com/v1/invoice" // List endpoint
+	url := "https://api.frisbii.com/v1/list/invoice?from=2020-01-01" // List endpoint
 
 	cfg := config.LoadConfig()
 
@@ -164,7 +164,7 @@ func GetInvoiceList(nextPage string, country string) ([]Invoice, string, error) 
 	// Add next_page token if provided
 	if nextPage != "" {
 		q := req.URL.Query()
-		q.Add("next_page", nextPage)
+		q.Add("next_page_token", nextPage)
 		req.URL.RawQuery = q.Encode()
 	}
 

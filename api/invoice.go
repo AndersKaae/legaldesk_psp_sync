@@ -12,10 +12,13 @@ import (
 
 // Transaction holds minimal info for state tracking
 type Transaction struct {
-	State   string    `json:"state"`
-	Type    string    `json:"type"`
-	Created time.Time `json:"created"`
-	Settled time.Time `json:"settled"` // optional
+	State      string    `json:"state"`
+	Type       string    `json:"type"`
+	Created    time.Time `json:"created"`
+	Settled    time.Time `json:"settled,omitempty"`
+	Authorized time.Time `json:"authorized,omitempty"`
+	Failed     time.Time `json:"failed,omitempty"`
+	Refunded   time.Time `json:"refunded,omitempty"`
 }
 
 // InvoiceResponse models the API response fields we care about
@@ -32,6 +35,11 @@ type InvoiceResponse struct {
 	RefundedAmount   int64         `json:"refunded_amount"`
 	AuthorizedAmount int64         `json:"authorized_amount"`
 	Transactions     []Transaction `json:"transactions"`
+	State            string        `json:"state"`
+	Authorized       time.Time     `json:"authorized,omitempty"`
+	Settled          time.Time     `json:"settled,omitempty"`
+	Failed           time.Time     `json:"failed,omitempty"`
+	Cancelled        time.Time     `json:"cancelled,omitempty"`
 }
 
 // InvoiceListResponse models the invoice list API response
@@ -59,26 +67,28 @@ type Invoice struct {
 	AuthorizedAmount int64
 	Country          string
 	States           InvoiceStates
+	State            string
 }
 
-// mapStates converts transactions to InvoiceStates
-func mapStates(transactions []Transaction) InvoiceStates {
+// mapStates converts invoice response to InvoiceStates map
+func mapStates(r InvoiceResponse) InvoiceStates {
 	states := make(InvoiceStates)
 
-	for _, tx := range transactions {
-		var ts *time.Time
-
-		if !tx.Settled.IsZero() {
-			ts = &tx.Settled
-		} else if !tx.Created.IsZero() {
-			ts = &tx.Created
-		} else {
-			ts = nil
-		}
-
-		states[tx.State] = ts
+	if !r.Created.IsZero() {
+		states["created"] = &r.Created
 	}
-
+	if !r.Authorized.IsZero() {
+		states["authorized"] = &r.Authorized
+	}
+	if !r.Settled.IsZero() {
+		states["settled"] = &r.Settled
+	}
+	if !r.Failed.IsZero() {
+		states["failed"] = &r.Failed
+	}
+	if !r.Cancelled.IsZero() {
+		states["cancelled"] = &r.Cancelled
+	}
 	return states
 }
 
@@ -97,7 +107,8 @@ func mapInvoice(r InvoiceResponse, country string) Invoice {
 		RefundedAmount:   r.RefundedAmount,
 		AuthorizedAmount: r.AuthorizedAmount,
 		Country:          country,
-		States:           mapStates(r.Transactions),
+		States:           mapStates(r),
+		State:            r.State,
 	}
 }
 

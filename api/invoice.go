@@ -148,7 +148,7 @@ func GetInvoice(invoiceId string, country string) (Invoice, error) {
 	}
 
 	// Country is implied from API usage
-	return mapInvoice(apiResp, "DK"), nil
+	return mapInvoice(apiResp, country), nil
 }
 
 func GetInvoiceList(nextPage string, country string) ([]Invoice, string, error) {

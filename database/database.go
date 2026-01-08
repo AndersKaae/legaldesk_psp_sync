@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"time"
 )
 
@@ -73,6 +73,9 @@ type Invoice struct {
 var db *sql.DB
 
 func InitDB(cfg config.Config) error {
+	if err := createDatabaseIfNotExists(cfg.DatabaseDSN); err != nil {
+		return err
+	}
 	var err error
 	db, err = sql.Open("mysql", cfg.DatabaseDSN)
 	if err != nil {
@@ -86,6 +89,29 @@ func InitDB(cfg config.Config) error {
 	if err = createTables(); err != nil {
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
+	return nil
+}
+
+func createDatabaseIfNotExists(dsn string) error {
+	cfg, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return fmt.Errorf("failed to parse DSN: %w", err)
+	}
+
+	dbName := cfg.DBName
+	cfg.DBName = ""
+
+	db, err := sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		return fmt.Errorf("failed to open database for creation check: %w", err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName))
+	if err != nil {
+		return fmt.Errorf("failed to create database: %w", err)
+	}
+
 	return nil
 }
 

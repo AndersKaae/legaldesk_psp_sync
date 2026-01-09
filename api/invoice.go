@@ -36,6 +36,7 @@ type InvoiceResponse struct {
 	AuthorizedAmount int64         `json:"authorized_amount"`
 	Transactions     []Transaction `json:"transactions"`
 	State            string        `json:"state"`
+	Plan             string        `json:"plan"`
 	Authorized       time.Time     `json:"authorized,omitempty"`
 	Settled          time.Time     `json:"settled,omitempty"`
 	Failed           time.Time     `json:"failed,omitempty"`
@@ -68,6 +69,7 @@ type Invoice struct {
 	Country          string
 	States           InvoiceStates
 	State            string
+	Plan             string
 }
 
 // mapStates converts invoice response to InvoiceStates map
@@ -109,6 +111,7 @@ func mapInvoice(r InvoiceResponse, country string) Invoice {
 		Country:          country,
 		States:           mapStates(r),
 		State:            r.State,
+		Plan:             r.Plan,
 	}
 }
 

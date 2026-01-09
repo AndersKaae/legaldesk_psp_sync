@@ -56,14 +56,13 @@ func Webhook(country string) http.HandlerFunc {
 		customerStatus := []string{"customer_created", "customer_deleted", "customer_changed"}
 
 		if _, found := findStatus(invoiceStatus, payload.EventType); found {
-			log.Printf("Processing invoice event: %s\n", payload.EventType)
 			apiInvoice, err := api.GetInvoice(payload.Invoice, country)
 			if err != nil {
 				log.Printf("Error fetching invoice: %v", err)
 				http.Error(w, "Failed to fetch invoice", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Fetched invoice from API: %+v\n", apiInvoice)
+			log.Printf("Recieved invoice from webhook: %+v\n", apiInvoice.Handle)
 
 			dbInvoice := database.Invoice{
 				ID:               apiInvoice.ID,
@@ -78,6 +77,7 @@ func Webhook(country string) http.HandlerFunc {
 				RefundedAmount:   apiInvoice.RefundedAmount,
 				AuthorizedAmount: apiInvoice.AuthorizedAmount,
 				Country:          apiInvoice.Country,
+				Plan:             apiInvoice.Plan,
 				States:           database.InvoiceStates(apiInvoice.States),
 			}
 
@@ -86,8 +86,6 @@ func Webhook(country string) http.HandlerFunc {
 				http.Error(w, "Failed to save invoice", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Saved invoice to DB: %+v\n", dbInvoice)
-
 		} else if _, found := findStatus(customerStatus, payload.EventType); found {
 			apiCustomer, err := api.GetCustomer(payload.Customer, country)
 			if err != nil {

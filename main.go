@@ -107,7 +107,6 @@ func backfillInvoicesForCountry(country string) int {
 	nextPage := ""
 	for {
 		invoices, newNextPage, err := api.GetInvoiceList(nextPage, country)
-		log.Println(newNextPage)
 		if err != nil {
 			log.Printf("Error fetching invoice list for %s (nextPage: %s): %v", country, nextPage, err)
 			break // Stop backfill for this country on error

@@ -55,19 +55,20 @@ type Customer struct {
 }
 
 type Invoice struct {
-	ID               string
-	Handle           string
-	Customer         string
-	Currency         string
-	Created          time.Time
-	DiscountAmount   int64
-	OrgAmount        int64
-	AmountVAT        int64
-	AmountExVAT      int64
-	RefundedAmount   int64
-	AuthorizedAmount int64
-	Country          string
-	States           InvoiceStates
+	ID               string `json:"id"`
+	Handle           string `json:"handle"`
+	Customer         string `json:"customer"`
+	Currency         string `json:"currency"`
+	Created          time.Time `json:"created"`
+	DiscountAmount   int64 `json:"discount_amount"`
+	OrgAmount        int64 `json:"org_amount"`
+	AmountVAT        int64 `json:"amount_vat"`
+	AmountExVAT      int64 `json:"amount_ex_vat"`
+	RefundedAmount   int64 `json:"refunded_amount"`
+	AuthorizedAmount int64 `json:"authorized_amount"`
+	Country          string `json:"country"`
+	Plan             string `json:"plan"`
+	States           InvoiceStates `json:"states"`
 }
 
 var db *sql.DB
@@ -174,6 +175,7 @@ func createTables() error {
 		refunded_amount INTEGER,
 		authorized_amount INTEGER,
 		country VARCHAR(255),
+		plan VARCHAR(255),
 		states JSON
 	);`
 
@@ -265,8 +267,8 @@ func CreateOrUpdateInvoice(invoice *Invoice) error {
 	query := `
 	INSERT INTO invoices (
 		id, handle, customer, currency, created, discount_amount, org_amount,
-		amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, states
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, plan, states
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON DUPLICATE KEY UPDATE
 		handle = VALUES(handle),
 		customer = VALUES(customer),
@@ -279,11 +281,12 @@ func CreateOrUpdateInvoice(invoice *Invoice) error {
 		refunded_amount = VALUES(refunded_amount),
 		authorized_amount = VALUES(authorized_amount),
 		country = VALUES(country),
+		plan = VALUES(plan),
 		states = VALUES(states);
 	`
 	_, err = db.Exec(query,
 		invoice.ID, invoice.Handle, invoice.Customer, invoice.Currency, invoice.Created, invoice.DiscountAmount, invoice.OrgAmount,
-		invoice.AmountVAT, invoice.AmountExVAT, invoice.RefundedAmount, invoice.AuthorizedAmount, invoice.Country, statesJSON,
+		invoice.AmountVAT, invoice.AmountExVAT, invoice.RefundedAmount, invoice.AuthorizedAmount, invoice.Country, invoice.Plan, statesJSON,
 	)
 	return err
 }
@@ -291,7 +294,7 @@ func CreateOrUpdateInvoice(invoice *Invoice) error {
 func GetInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 	query := `
 	SELECT id, handle, customer, currency, created, discount_amount, org_amount,
-	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, states
+	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, plan, states
 	FROM invoices WHERE created >= ? AND created < ? ORDER BY created DESC
 	`
 	rows, err := db.Query(query, from, to)
@@ -307,7 +310,7 @@ func GetInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 		if err := rows.Scan(
 			&invoice.ID, &invoice.Handle, &invoice.Customer, &invoice.Currency, &invoice.Created,
 			&invoice.DiscountAmount, &invoice.OrgAmount, &invoice.AmountVAT, &invoice.AmountExVAT,
-			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &statesJSON,
+			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &invoice.Plan, &statesJSON,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan invoice row: %w", err)
 		}
@@ -328,7 +331,7 @@ func GetInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 func GetVirtualOfficeInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 	query := `
 	SELECT id, handle, customer, currency, created, discount_amount, org_amount,
-	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, states
+	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, plan, states
 	FROM invoices WHERE created >= ? AND created < ? AND handle LIKE "inv%" ORDER BY created DESC
 	`
 	rows, err := db.Query(query, from, to)
@@ -344,7 +347,7 @@ func GetVirtualOfficeInvoicesByDateRange(from, to time.Time) ([]Invoice, error) 
 		if err := rows.Scan(
 			&invoice.ID, &invoice.Handle, &invoice.Customer, &invoice.Currency, &invoice.Created,
 			&invoice.DiscountAmount, &invoice.OrgAmount, &invoice.AmountVAT, &invoice.AmountExVAT,
-			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &statesJSON,
+			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &invoice.Plan, &statesJSON,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan invoice row: %w", err)
 		}

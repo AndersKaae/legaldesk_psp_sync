@@ -132,7 +132,7 @@ func backfillInvoicesForCountry(country string) int {
 			if err := database.CreateOrUpdateInvoice(&dbInvoice); err != nil {
 				log.Printf("Error saving backfilled invoice %s to DB for %s: %v", apiInvoice.ID, country, err)
 			} else {
-				log.Printf("Backfilled invoice %s for %s", apiInvoice.ID, country)
+				log.Printf("Backfilled invoice %s for %s", apiInvoice.Handle, country)
 				invoiceCount++
 			}
 		}
@@ -173,7 +173,9 @@ func main() {
 		go runBackfill() // Run backfill in a goroutine
 	}
 
-	http.HandleFunc("/invoices/", handlers.RequireBasicAuth(handlers.Invoices(), cfg.BasicAuthUser, cfg.BasicAuthPass))
+	http.HandleFunc("/invoices/", handlers.RequireBasicAuth(handlers.Invoices("all"), cfg.BasicAuthUser, cfg.BasicAuthPass))
+
+	http.HandleFunc("/virtual-office-invoices/", handlers.RequireBasicAuth(handlers.Invoices("virtualOffice"), cfg.BasicAuthUser, cfg.BasicAuthPass))
 	http.HandleFunc("/webhook/denmark", handlers.Webhook("DK"))
 	http.HandleFunc("/webhook/sweden", handlers.Webhook("SE"))
 	http.HandleFunc("/webhook/norway", handlers.Webhook("NO"))

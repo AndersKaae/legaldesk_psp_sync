@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func Invoices() http.HandlerFunc {
+func Invoices(filter string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -43,11 +43,22 @@ func Invoices() http.HandlerFunc {
 			return
 		}
 
-		invoices, err := database.GetInvoicesByDateRange(from, to)
-		if err != nil {
-			log.Printf("Failed to fetch invoices: %v", err)
-			http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
-			return
+		var invoices []database.Invoice // <-- adjust type if needed
+
+		if filter == "all" {
+			invoices, err = database.GetInvoicesByDateRange(from, to.Add(24*time.Hour))
+			if err != nil {
+				log.Printf("Failed to fetch invoices: %v", err)
+				http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
+				return
+			}
+		} else if filter == "virtualOffice" {
+			invoices, err = database.GetVirtualOfficeInvoicesByDateRange(from, to.Add(24*time.Hour))
+			if err != nil {
+				log.Printf("Failed to fetch invoices: %v", err)
+				http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")

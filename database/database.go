@@ -58,6 +58,7 @@ type Invoice struct {
 	ID               string `json:"id"`
 	Handle           string `json:"handle"`
 	Customer         string `json:"customer"`
+	CustomerEmail    string `json:"customer_email"`
 	Currency         string `json:"currency"`
 	Created          time.Time `json:"created"`
 	DiscountAmount   int64 `json:"discount_amount"`
@@ -330,9 +331,11 @@ func GetInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 
 func GetVirtualOfficeInvoicesByDateRange(from, to time.Time) ([]Invoice, error) {
 	query := `
-	SELECT id, handle, customer, currency, created, discount_amount, org_amount,
-	amount_vat, amount_ex_vat, refunded_amount, authorized_amount, country, plan, states
-	FROM invoices WHERE created >= ? AND created < ? AND handle LIKE "inv%" ORDER BY created DESC
+	SELECT i.id, i.handle, i.customer, c.email, i.currency, i.created, i.discount_amount, i.org_amount,
+	i.amount_vat, i.amount_ex_vat, i.refunded_amount, i.authorized_amount, i.country, i.plan, i.states
+	FROM invoices i
+	LEFT JOIN customers c ON i.customer = c.handle
+	WHERE i.created >= ? AND i.created < ? AND i.handle LIKE "inv%" ORDER BY i.created DESC
 	`
 	rows, err := db.Query(query, from, to)
 	if err != nil {
@@ -345,7 +348,7 @@ func GetVirtualOfficeInvoicesByDateRange(from, to time.Time) ([]Invoice, error) 
 		var invoice Invoice
 		var statesJSON []byte
 		if err := rows.Scan(
-			&invoice.ID, &invoice.Handle, &invoice.Customer, &invoice.Currency, &invoice.Created,
+			&invoice.ID, &invoice.Handle, &invoice.Customer, &invoice.CustomerEmail, &invoice.Currency, &invoice.Created,
 			&invoice.DiscountAmount, &invoice.OrgAmount, &invoice.AmountVAT, &invoice.AmountExVAT,
 			&invoice.RefundedAmount, &invoice.AuthorizedAmount, &invoice.Country, &invoice.Plan, &statesJSON,
 		); err != nil {

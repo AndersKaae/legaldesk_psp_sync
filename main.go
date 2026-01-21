@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
@@ -126,12 +127,15 @@ func backfillInvoicesForCountry(country string) int {
 				RefundedAmount:   apiInvoice.RefundedAmount,
 				AuthorizedAmount: apiInvoice.AuthorizedAmount,
 				Country:          apiInvoice.Country,
+				Plan:             apiInvoice.Plan,
 				States:           database.InvoiceStates(apiInvoice.States),
 			}
+			jsonInvoice, _ := json.Marshal(apiInvoice)
 			if err := database.CreateOrUpdateInvoice(&dbInvoice); err != nil {
+				log.Printf("API Invoice for %s: %s", apiInvoice.ID, string(jsonInvoice))
 				log.Printf("Error saving backfilled invoice %s to DB for %s: %v", apiInvoice.ID, country, err)
 			} else {
-				log.Printf("Backfilled invoice %s for %s", apiInvoice.Handle, country)
+				log.Printf("(%s) Backfilled invoice %s for %s", apiInvoice.Created, apiInvoice.Handle, country)
 				invoiceCount++
 			}
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/AndersKaae/legaldesk_psp_sync/config"
 	"github.com/go-sql-driver/mysql"
+	"strings"
 	"time"
 )
 
@@ -55,20 +56,20 @@ type Customer struct {
 }
 
 type Invoice struct {
-	ID               string `json:"id"`
-	Handle           string `json:"handle"`
-	Customer         string `json:"customer"`
-	CustomerEmail    string `json:"customer_email"`
-	Currency         string `json:"currency"`
-	Created          time.Time `json:"created"`
-	DiscountAmount   int64 `json:"discount_amount"`
-	OrgAmount        int64 `json:"org_amount"`
-	AmountVAT        int64 `json:"amount_vat"`
-	AmountExVAT      int64 `json:"amount_ex_vat"`
-	RefundedAmount   int64 `json:"refunded_amount"`
-	AuthorizedAmount int64 `json:"authorized_amount"`
-	Country          string `json:"country"`
-	Plan             string `json:"plan"`
+	ID               string        `json:"id"`
+	Handle           string        `json:"handle"`
+	Customer         string        `json:"customer"`
+	CustomerEmail    string        `json:"customer_email"`
+	Currency         string        `json:"currency"`
+	Created          time.Time     `json:"created"`
+	DiscountAmount   int64         `json:"discount_amount"`
+	OrgAmount        int64         `json:"org_amount"`
+	AmountVAT        int64         `json:"amount_vat"`
+	AmountExVAT      int64         `json:"amount_ex_vat"`
+	RefundedAmount   int64         `json:"refunded_amount"`
+	AuthorizedAmount int64         `json:"authorized_amount"`
+	Country          string        `json:"country"`
+	Plan             string        `json:"plan"`
 	States           InvoiceStates `json:"states"`
 }
 
@@ -260,6 +261,9 @@ func CreateOrUpdateCustomer(customer *Customer) error {
 }
 
 func CreateOrUpdateInvoice(invoice *Invoice) error {
+	if strings.Contains(invoice.Handle, "inv") && invoice.Plan == "" {
+		return fmt.Errorf("invoice plan cannot be empty for invoices with 'inv' in handle")
+	}
 	statesJSON, err := json.Marshal(invoice.States)
 	if err != nil {
 		return fmt.Errorf("failed to marshal invoice states: %w", err)

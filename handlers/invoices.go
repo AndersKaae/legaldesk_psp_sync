@@ -8,6 +8,25 @@ import (
 	"time"
 )
 
+// JSONInvoice is the representation of an invoice for JSON responses.
+type JSONInvoice struct {
+	ID               string               `json:"id"`
+	Handle           string               `json:"handle"`
+	Customer         string               `json:"customer"`
+	CustomerEmail    *string              `json:"customer_email"` // Use a pointer to handle nulls
+	Currency         string               `json:"currency"`
+	Created          time.Time            `json:"created"`
+	DiscountAmount   int64                `json:"discount_amount"`
+	OrgAmount        int64                `json:"org_amount"`
+	AmountVAT        int64                `json:"amount_vat"`
+	AmountExVAT      int64                `json:"amount_ex_vat"`
+	RefundedAmount   int64                `json:"refunded_amount"`
+	AuthorizedAmount int64                `json:"authorized_amount"`
+	Country          string               `json:"country"`
+	Plan             string               `json:"plan"`
+	States           database.InvoiceStates `json:"states"`
+}
+
 func Invoices(filter string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -43,17 +62,17 @@ func Invoices(filter string) http.HandlerFunc {
 			return
 		}
 
-		var invoices []database.Invoice // <-- adjust type if needed
+		var dbInvoices []database.Invoice
 
 		if filter == "all" {
-			invoices, err = database.GetInvoicesByDateRange(from, to.Add(24*time.Hour))
+			dbInvoices, err = database.GetInvoicesByDateRange(from, to.Add(24*time.Hour))
 			if err != nil {
 				log.Printf("Failed to fetch invoices: %v", err)
 				http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
 				return
 			}
 		} else if filter == "virtualOffice" {
-			invoices, err = database.GetVirtualOfficeInvoicesByDateRange(from, to.Add(24*time.Hour))
+			dbInvoices, err = database.GetVirtualOfficeInvoicesByDateRange(from, to.Add(24*time.Hour))
 			if err != nil {
 				log.Printf("Failed to fetch invoices: %v", err)
 				http.Error(w, "Failed to fetch invoices", http.StatusInternalServerError)
@@ -61,8 +80,35 @@ func Invoices(filter string) http.HandlerFunc {
 			}
 		}
 
+		// Map database invoices to JSON invoices
+		jsonInvoices := make([]JSONInvoice, len(dbInvoices))
+		for i, dbInvoice := range dbInvoices {
+			var customerEmail *string
+			if dbInvoice.CustomerEmail.Valid {
+				customerEmail = &dbInvoice.CustomerEmail.String
+			}
+
+			jsonInvoices[i] = JSONInvoice{
+				ID:               dbInvoice.ID,
+				Handle:           dbInvoice.Handle,
+				Customer:         dbInvoice.Customer,
+				CustomerEmail:    customerEmail,
+				Currency:         dbInvoice.Currency,
+				Created:          dbInvoice.Created,
+				DiscountAmount:   dbInvoice.DiscountAmount,
+				OrgAmount:        dbInvoice.OrgAmount,
+				AmountVAT:        dbInvoice.AmountVAT,
+				AmountExVAT:      dbInvoice.AmountExVAT,
+				RefundedAmount:   dbInvoice.RefundedAmount,
+				AuthorizedAmount: dbInvoice.AuthorizedAmount,
+				Country:          dbInvoice.Country,
+				Plan:             dbInvoice.Plan,
+				States:           dbInvoice.States,
+			}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(invoices); err != nil {
+		if err := json.NewEncoder(w).Encode(jsonInvoices); err != nil {
 			log.Printf("Failed to encode invoices to JSON: %v", err)
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		}

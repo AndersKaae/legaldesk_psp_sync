@@ -59,7 +59,7 @@ type Invoice struct {
 	ID               string        `json:"id"`
 	Handle           string        `json:"handle"`
 	Customer         string        `json:"customer"`
-	CustomerEmail    string        `json:"customer_email"`
+	CustomerEmail    sql.NullString `json:"customer_email"`
 	Currency         string        `json:"currency"`
 	Created          time.Time     `json:"created"`
 	DiscountAmount   int64         `json:"discount_amount"`

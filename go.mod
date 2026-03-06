@@ -1,6 +1,6 @@
 module github.com/AndersKaae/legaldesk_psp_sync
 
-go 1.25.5
+go 1.24.0
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3

@@ -49,7 +49,7 @@ func Webhook(country string) http.HandlerFunc {
 		defer r.Body.Close()
 
 		log.Printf("EventType: %s\nReceived webhook for country %s: %+v\n",
-			payload.EventType, country, payload)
+			payload.EventType, country, payload.Invoice)
 
 		// Process the data
 		invoiceStatus := []string{"invoice_created", "invoice_authorized", "invoice_settled", "invoice_failed", "invoice_refund"}
@@ -93,7 +93,7 @@ func Webhook(country string) http.HandlerFunc {
 				http.Error(w, "Failed to fetch customer", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Fetched customer from API: %+v\n", apiCustomer)
+			log.Printf("Fetched customer from API: %+v\n", apiCustomer.Email)
 
 			dbCustomer := database.Customer{
 				ActiveSubscriptions:             apiCustomer.ActiveSubscriptions,
@@ -143,7 +143,6 @@ func Webhook(country string) http.HandlerFunc {
 				http.Error(w, "Failed to save customer", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Saved customer to DB: %+v\n", dbCustomer)
 		} else {
 			log.Printf("Unknown event type: %s\n", payload.EventType)
 		}
